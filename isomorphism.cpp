@@ -25,46 +25,59 @@ struct cell
     }
 
 };
-cell  cell_info(int from, int to, vector<int>* adjacency_list)
+int pathsA[1024][1024], pathsB[1024][1024], valuesA[1024][1024], valuesB[1024][1024];
+void floyd(int values [][1024], int paths [][1024])
 {
-    int path[1024];
-
-    for(int i = 0;i <= n;i++)
-        path[i] = -1;
-
-    path[from] = 0;
-    queue<int>q;
-    q.push(from);
-    while(!q.empty())
+    for(int i=1;i<=n;i++)
     {
-        int curr = q.front();
-        q.pop();
-        for(int i = 0;i < adjacency_list[curr].size();i++)
+        for(int j=1;j<=n;j++)
         {
-            if(curr == from && adjacency_list[curr][i] == to )
-                continue;
-            if(path[adjacency_list[curr][i]] == -1)
+            if(values[i][j] > 0)
             {
-                path[adjacency_list[curr][i]] = path[curr]+1;
-                q.push(adjacency_list[curr][i]);
+                paths[i][j] = values[i][j];
+                paths[j][i] = values[j][i];
+            }
+            else
+            {
+                paths[i][j] = 1000000;
+                paths[j][i] = 1000000;
+            }
+        }
+        paths[i][i]=0;
+    }
+
+    for(int mid = 1;mid <= n;mid++)
+    {
+        for(int from = 1;from <= n;from++)
+        {
+            for(int to = 1;to <= n;to++)
+            {
+                if( from!=to && paths[from][to] > paths[from][mid] + paths[mid][to])
+                {
+                    paths[from][to] = paths[from][mid] + paths[mid][to];
+                }
             }
         }
     }
+}
+cell  cell_info(int from, int to, vector<int>* adjacency_list, int value [][1024], int paths [][1024])
+{
 
     bool fromPath[1024];
 
     for(int i = 0;i <= n;i++)
         fromPath[i]=false;
 
+    queue<int> q;
     q.push(to);
     fromPath[to]=true;
     while(!q.empty())
     {
-        int curr=q.front();
+        int curr = q.front();
         q.pop();
         for(int i = 0;i < adjacency_list[curr].size();i++)
         {
-            if(path[adjacency_list[curr][i]] == path[curr]-1)
+            if(paths[adjacency_list[curr][i]] == paths[curr] - value[curr][adjacency_list[curr][i]])
             {
                 q.push(adjacency_list[curr][i]);
                 fromPath[adjacency_list[curr][i]]=true;
@@ -96,7 +109,7 @@ cell  cell_info(int from, int to, vector<int>* adjacency_list)
             break;
         }
     }
-    res.distance=path[to];
+    res.distance=paths[from][to];
     res.nodes_numer = nodes_number;
     res.nodes_numer = edges_number;
 
@@ -117,13 +130,13 @@ cell Sa[1024][1024], Sb[1024][1024];
 
 vector<int>frequencyA[1024], frequencyB[1024];
 
-void calc_S( cell S[][1024], vector<int>* adjList )
+void calc_S( cell S[][1024], vector<int>* adjList, int value [][1024], int paths [][1024])
 {
-    for(int y=1;y<=n;y++)
+    for(int y = 1;y <= n;y++)
     {
-        for(int x=1;x<=n;x++)
+        for(int x = 1;x <= n;x++)
         {
-            S[x][y]=cell_info(x, y, adjList);
+            S[x][y] = cell_info(x, y, adjList, value, paths);
             S[x][y].calcCode();
         }
     }
@@ -264,61 +277,50 @@ bool findIsomorphismFunction(int* order_A, int* order_B)
     }
     return true;
 }
-void input_edges_list()
+void input_edges_list(vector<int>* adjacency_list, int values [][1024])
 {
     cin>>n>>m;
-    for(int i=0;i<m;i++)
+    for(int i = 0;i < m;i++)
     {
-        int a, b;
-        cin>>a>>b;
-        adjacency_list_A[a].push_back(b);
-        adjacency_list_A[b].push_back(a);
-    }
-
-    for(int i=0;i<m;i++)
-    {
-        int a, b;
-        cin>>a>>b;
-        adjacency_list_B[a].push_back(b);
-        adjacency_list_B[b].push_back(a);
+        int a, b, v;
+        cin>>a>>b>>v;
+        adjacency_list[a].push_back(b);
+        adjacency_list[b].push_back(a);
+        values[a][b] = v;
+        values[b][a] = v;
     }
 }
-void input_matrix()
+void input_matrix(vector<int>* adjacency_list, int values [][1024])
 {
     cin>>n;
     for(int i = 1;i <= n;i++)
     {
         for(int j = 1;j <= n;j++)
         {
-            bool a;
+            int a;
             cin>>a;
             if(a)
             {
-                adjacency_list_A[i].push_back(j);
-                adjacency_list_A[j].push_back(i);
+                adjacency_list[i].push_back(j);
+                adjacency_list[j].push_back(i);
+                values[i][j] = a;
+                values[j][i] = a;
+
             }
         }
     }
-    cin>>n;
-    for(int i = 1;i <= n;i++)
-    {
-        for(int j = 1;j <= n;j++)
-        {
-            bool a;
-            cin>>a;
-            if(a)
-            {
-                adjacency_list_B[j].push_back(i);
-                adjacency_list_B[i].push_back(j);
-            }
-        }
-    }
+
 }
 int main(){
 
-    input_matrix();
-    calc_S(Sa, adjacency_list_A);
-    calc_S(Sb, adjacency_list_B);
+    input_edges_list(adjacency_list_A, valuesA);
+    input_edges_list(adjacency_list_B, valuesB);
+
+    floyd(valuesA, pathsA);
+    floyd(valuesB, pathsB);
+
+    calc_S(Sa, adjacency_list_A, valuesA, pathsA);
+    calc_S(Sb, adjacency_list_B, valuesB, pathsB);
 
     map<long long, int> mapA = make_signs_map(Sa);
     map<long long, int> mapB = make_signs_map(Sb);
